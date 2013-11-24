@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html ng-app>
+<head>
+<title>Bible Geneology</title>
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap-theme.min.css">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="//code.jquery.com/jquery-1.10.2.min.js" type="text/javascript"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.1/angular.min.js" type="text/javascript"></script>
+<script type='text/javascript' src='https://www.google.com/jsapi'></script>
+<script type='text/javascript'>
+
+var kin = {{kin|safe}};
+var kinGoogle = {{kinGoogle|safe}};
+  google.load('visualization', '1', {packages:['orgchart']});
+  google.setOnLoadCallback(drawChart);
+  function drawChart() {
+    var data = new google.visualization.DataTable();
+    data.addColumn('string', 'Name');
+    data.addColumn('string', 'Manager');
+    //data.addColumn('string', 'ToolTip');
+    data.addRows(kinGoogle);
+    var chart = window.chart = new google.visualization.OrgChart(document.getElementById('geneoloyTree'));
+    google.visualization.events.addListener(chart, 'select', function(el){console.log(el); console.log( chart.getSelection() ); });
+
+    chart.draw(data, {allowHtml:true });
+  }
+  $(document).ready(function(){
+  	drawChart();
+  })
+  function KinCtrl( $scope, $http ){
+  	$scope.kin = kin;
+    console.log($scope);
+  	$scope.addKin = function(){
+      console.log($scope);
+  		var newKin = {
+  			name: $scope.kinName,
+  			parent: $scope.parent
+  		}
+      $http.post('/addKin', newKin).success(function(data){
+          $scope.kin.push( data );
+          kinGoogle.push( formatGoogleChart( data ) );
+          drawChart();
+          $("#addKinDialog").modal('hide');
+      })
+  	}
+  }
+  function formatGoogleChart( doc ){
+      var newFormat = [];
+      var parentId = (doc.parent !== null ? doc.parent + '' : null );
+      newFormat.push({
+        v: doc._id + '',
+        f: doc.name + ''
+      });
+      newFormat.push(parentId);
+
+    return newFormat;
+  }
+
+  function ajax( x ){
+    var service, data, success, error, dialog;
+    if(x){
+      $.ajax({
+        url : "/" + x.service,
+        dataType : 'json',
+        data: x.data,
+        type: 'POST',
+        success: function(data){
+          if(data){
+            if(x.success)
+              x.success(data);;
+          }
+        }
+      })
+    }
+  }
+</script>
+<style>
+  /**Bootstrap overides**/
+  table.google-visualization-orgchart-table{
+    border-collapse: separate;
+  }
+  #openAddKinModalBtn{
+    margin: 20px 20px 0 0;
+  }
+</style>
+</head>
+<body>
+
+<button id="openAddKinModalBtn" class="btn btn-primary pull-right" data-toggle="modal" data-target="#addKinDialog">Add Kin</button>
+<div id="container" ng-controller="KinCtrl">
+  <div id="geneoloyTree"></div>
+
+  <div class="modal fade" id="addKinDialog">
+  	<div class="modal-dialog">
+  		<div class="modal-content">
+        <form name="addGeneologyForm" ng-submit="addKin()">
+    			<div class="modal-header">
+    				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    				<h4 class="modal-title">Add Kin</h4>
+    			</div>
+    			<div class="modal-body">
+      				<div class="form-horizontal">
+
+                <div class="form-group">
+                  <label class="col-sm-3 control-label">Name: </label>
+                  <div class="col-sm-9">
+                    <input type="text" class="form-control" ng-model="kinName" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="col-sm-3 control-label">Parent: </label>
+                  <div class="col-sm-9">
+                    <select type="text" class="form-control" ng-model="parent">
+                      <option ng-model-instant ng-repeat="person in kin" value="{% raw %}{{person._id}}{% endraw %}">{% raw %}{{person.name}}{% endraw %}</option>
+                    </select>
+                  </div>
+                </div>
+
+              </div>
+    			</div>
+    			<div class="modal-footer">
+    				<button class="btn btn-default" data-dismiss="modal">Close</button>
+    				<input type="submit" class="btn btn-primary" value="Save"/>
+    			</div>
+        </form>
+  		</div>
+  	</div>
+  </div>
+</div>
+</body>
+</html>
